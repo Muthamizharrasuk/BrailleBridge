@@ -1,0 +1,21 @@
+.bb-sim { max-width: 560px; margin: 2rem auto; padding: 1.5rem; font-family: system-ui, sans-serif;
+  background: #0f172a; color: #e2e8f0; border-radius: 16px; }
+.bb-sim h2 { margin-top: 0 }
+.bb-sim textarea { width: 100%; box-sizing: border-box; padding: .75rem; border-radius: 8px; border: 1px solid #334155;
+  background: #1e293b; color: inherit; font-size: 1rem; }
+.bb-row { display: flex; gap: .75rem; align-items: center; justify-content: space-between; margin: .75rem 0 }
+.bb-sim button { padding: .5rem 1rem; border-radius: 8px; border: 1px solid #475569; background: #1e293b;
+  color: inherit; cursor: pointer; font-size: .95rem }
+.bb-sim button:disabled { opacity: .4; cursor: not-allowed }
+.bb-switch button.active, .bb-primary { background: #6366f1; border-color: #6366f1 }
+.bb-cells { display: flex; gap: 1.25rem; justify-content: center; margin: 1.5rem 0 }
+.bb-cell { display: grid; grid-template-columns: repeat(2, 28px); gap: 12px; padding: 16px 18px 8px;
+  background: #1e293b; border-radius: 14px; position: relative }
+.bb-dot { width: 28px; height: 28px; border-radius: 50%; background: #0f172a; border: 2px solid #334155 }
+.bb-dot.on { background: radial-gradient(circle at 35% 30%, #fde68a, #f59e0b); border-color: #fbbf24;
+  box-shadow: 0 0 12px #f59e0b99 }
+.bb-mask { grid-column: 1 / 3; text-align: center; font-size: .75rem; color: #94a3b8 }
+.bb-nav span { font-variant-numeric: tabular-nums }
+.bb-preview { font-size: 1.6rem; word-break: break-all; letter-spacing: .1em }
+.bb-sim pre { background: #020617; padding: .75rem; border-radius: 8px; overflow: auto; font-size: .8rem }
+.bb-error { color: #fca5a5 }
