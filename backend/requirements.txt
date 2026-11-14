@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+pytest
+httpx
+# Liblouis bindings: brew install liblouis (loaded automatically by translator.py)
