@@ -69,6 +69,7 @@ test('supports typing when browser recognition is missing', async ({ page }) => 
 
 test('sends a labeled fixture and navigates its three-cell pages', async ({ page }) => {
   await page.goto('/');
+  await page.getByRole('combobox', { name: 'Translation source' }).selectOption('demo');
   await page.getByRole('button', { name: 'Use sample: Hello' }).click();
   await expect(page.getByRole('textbox')).toHaveValue('Hello');
   await page.getByRole('button', { name: 'Send to Braille' }).click();
@@ -82,6 +83,38 @@ test('sends a labeled fixture and navigates its three-cell pages', async ({ page
   await page.screenshot({ path: '.playwright/braille-preview-mobile.png', fullPage: true });
   await page.getByRole('textbox').fill('Another message');
   await expect(page.getByRole('heading', { name: 'Braille preview' })).toHaveCount(0);
+});
+
+test('live speech adapter to Liblouis API to preview (no mocked translation)', async ({ page }) => {
+  test.skip(process.env.RUN_LIVE_BRAILLE !== '1', 'Run with RUN_LIVE_BRAILLE=1 after starting the real Liblouis API.');
+  await page.addInitScript(() => {
+    window.SpeechRecognition = class {
+      start() { this.onstart?.(); }
+      stop() {
+        this.onresult?.({ results: [Object.assign([{ transcript: 'Hello' }], { isFinal: true })] });
+        this.onend?.();
+      }
+      abort() {}
+    };
+  });
+  await page.goto('/');
+  await expect(page.getByRole('combobox', { name: 'Translation source' })).toHaveValue('real');
+  await page.getByRole('button', { name: 'Start Listening' }).click();
+  await page.getByRole('button', { name: 'Stop Listening' }).click();
+  await expect(page.getByRole('textbox')).toHaveValue('Hello');
+  const responsePromise = page.waitForResponse((response) => response.url().endsWith('/api/braille/translate'));
+  await page.getByRole('button', { name: 'Send to Braille' }).click();
+  const response = await responsePromise;
+  expect(response.ok()).toBe(true);
+  expect(await response.json()).toMatchObject({ cells: [32, 19, 17, 7, 7, 21], pages: [[32, 19, 17], [7, 7, 21]], cell_count: 6 });
+  await expect(page.getByText('API response', { exact: true })).toBeVisible();
+  await expect(page.getByText('Mask 32')).toBeVisible();
+  await page.getByRole('button', { name: 'Next page' }).click();
+  await expect(page.getByText('Page 2 of 2')).toBeVisible();
+  await page.getByRole('textbox').fill('Do NOT call Ana until 8:30. Meet at 42 Main St.!');
+  await page.getByRole('button', { name: 'Send to Braille' }).click();
+  await expect(page.getByRole('heading', { name: 'Braille preview' })).toBeVisible();
+  await expect(page.getByText('API response', { exact: true })).toBeVisible();
 });
 
 test('uses the real API contract with an intercepted network response', async ({ page }) => {

@@ -38,7 +38,14 @@ export async function translateSpeech(text, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request), signal: controller.signal,
     });
-    if (!response.ok) throw new Error(`Braille API request failed (HTTP ${response.status}). Check that the translation service is running.`);
+    if (!response.ok) {
+      let detail = '';
+      try {
+        const body = await response.json();
+        if (typeof body.detail === 'string') detail = ` ${body.detail.slice(0, 300)}`;
+      } catch { /* Proxies and unavailable services may return non-JSON errors. */ }
+      throw new Error(`Braille API request failed (HTTP ${response.status}).${detail || ' Check that the translation service is running.'}`);
+    }
     let data;
     try { data = await response.json(); }
     catch { throw new Error('The Braille API did not return valid JSON. Check the API URL and service.'); }

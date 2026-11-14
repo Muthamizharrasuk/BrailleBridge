@@ -44,6 +44,11 @@ describe('shared Braille API client', () => {
     await expect(translateSpeech('Hello', { fetchImpl: async () => ({ ok: false, status: 503 }) })).rejects.toThrow('HTTP 503');
   });
 
+  it('shows backend dependency errors instead of hiding a missing Liblouis installation', async () => {
+    await expect(translateSpeech('Hello', { fetchImpl: async () => ({ ok: false, status: 500,
+      json: async () => ({ detail: 'Liblouis Python bindings not found.' }) }) })).rejects.toThrow('Liblouis Python bindings not found.');
+  });
+
   it('explains connection failures and non-JSON responses', async () => {
     await expect(translateSpeech('Hi', { fetchImpl: async () => { throw new TypeError('fetch failed'); } })).rejects.toThrow('Cannot reach');
     await expect(translateSpeech('Hi', { fetchImpl: async () => ({ ok: true, json: async () => { throw new SyntaxError(); } }) })).rejects.toThrow('valid JSON');

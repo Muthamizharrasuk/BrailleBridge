@@ -1,10 +1,18 @@
 import React from 'react';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import BrailleSender from './BrailleSender.jsx';
 
 describe('Braille sending and preview', () => {
+  beforeEach(() => vi.stubEnv('VITE_BRAILLE_MODE', 'mock'));
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('defaults to the real backend unless mock mode is explicitly configured', () => {
+    vi.stubEnv('VITE_BRAILLE_MODE', 'real');
+    render(<BrailleSender text="Hello" listening={false} onUseSample={() => {}} />);
+    expect(screen.getByRole('combobox', { name: 'Translation source' })).toHaveValue('real');
+  });
   function braille(count) {
     const cells = Array(count).fill(1);
     const pages = Array.from({ length: Math.ceil(count / 3) }, (_, page) => [0, 1, 2].map((index) => cells[page * 3 + index] ?? 0));

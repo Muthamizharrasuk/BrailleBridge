@@ -1,5 +1,7 @@
 # BrailleBridge speech module - steps 1 and 2
 
+For real Windows/WSL integration and exact startup commands, see [DEMO.md](DEMO.md). The frontend now defaults to the real API through the Vite proxy; mock mode remains an explicit option.
+
 Standalone React development app owned by the speech branch. No changes to the shared app layout, Braille engine, contracts, or hardware are needed.
 
 ## Run on Windows / PowerShell
@@ -55,7 +57,7 @@ Demo mode supports only these two exact static fixtures, with no production tran
 
 The reusable `translateSpeech(text, options)` function in `src/braille/client.js` sends `POST /api/braille/translate` with `{ source: "speech", text, mode: "verbatim", grade: 1 }`. The reviewed text is preserved exactly. It validates masks, counts, three-cell pages, and final padding in the response. HTTP errors, invalid responses, connection failures, and a 15-second timeout are reported without falling back to demo data.
 
-For a backend on another port, copy `.env.example` to `.env.local`, set `VITE_BRAILLE_API_URL` to its full translation endpoint, and restart Vite. The backend must allow the frontend origin (normally `http://127.0.0.1:5173`) via CORS. This variable is public configuration, so never put secrets in it. Without configuration, the app uses the same-origin `/api/braille/translate`; the standalone Vite app does not provide that backend route.
+For a backend on another port, copy `.env.example` to `.env.local`, set `VITE_BRAILLE_API_URL` to its full translation endpoint, and restart Vite. The backend must allow the frontend origin (normally `http://127.0.0.1:5173`) via CORS. This variable is public configuration, so never put secrets in it. Without configuration, Vite proxies the same-origin `/api/braille/translate` to `http://127.0.0.1:8000`. Set `BRAILLE_BACKEND_URL` to change that target, or explicitly select demo mode for independent work.
 
 Choose **Real Braille API**, review the transcript, then select **Send to Braille**. A successful response is labeled **API response**. Without the teammate's backend, an error is expected. Network tests intercept/mock responses and do not prove the teammate's running service works.
 
@@ -67,6 +69,6 @@ Both versions are translated through the currently selected Braille adapter when
 
 Read both messages and choose **Approve concise text** before sending a candidate. Approval is disabled when measured cell count does not decrease. When counts are unavailable, an explicit approval remains possible, with a warning about unknown savings. Changes to the transcript, source, listening state, or mode invalidate approval and any previous preview. **Use original text** restores verbatim sending. Even after approval, inspect meaning carefully: no LLM or numeric/keyword heuristic guarantees semantic equivalence.
 
-The current UI uses Grade 1; the reusable client also accepts Grade 2. Conversation history, spoken replies, and a Whisper transcription fallback remain separate future steps. A live check against the teammate's running FastAPI/Liblouis service is still required; the engine is not in this checkout.
+The current UI uses Grade 1; the reusable client also accepts Grade 2. Conversation history, spoken replies, and a Whisper transcription fallback remain separate future steps. The merged FastAPI/Liblouis engine is now in this checkout. It requires a working Liblouis runtime; follow DEMO.md and run `npm run test:integration` to verify a real server.
 
 Browser tests use installed Google Chrome (Playwright channel `chrome`). If you use Edge instead, change the channel to `msedge` in `playwright.config.js`. Browser tests check native API availability, desktop/mobile rendering, and simulated recognition; they do not verify real microphone audio or the vendor speech service.

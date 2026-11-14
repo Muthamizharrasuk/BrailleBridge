@@ -5,7 +5,7 @@ import BraillePreview from './BraillePreview.jsx';
 import CompressionReview from './CompressionReview.jsx';
 
 export default function BrailleSender({ text, listening, onUseSample }) {
-  const [adapter, setAdapter] = useState('demo');
+  const [adapter, setAdapter] = useState(import.meta.env.VITE_BRAILLE_MODE === 'mock' ? 'demo' : 'real');
   const [mode, setMode] = useState('verbatim');
   const [approved, setApproved] = useState(null);
   const [state, setState] = useState({ status: 'idle', error: '', result: null });
