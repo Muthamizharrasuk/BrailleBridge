@@ -1,0 +1,67 @@
+:root { font-family: 'DM Sans', system-ui, sans-serif; color: #17363a; background: #f4f5ef; font-synthesis: none; line-height: 1.5; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+button, textarea { font: inherit; }
+button { cursor: pointer; transition: background 140ms ease; }
+button:disabled { cursor: not-allowed; opacity: .48; }
+button:focus-visible, textarea:focus-visible { outline: 3px solid #216dca; outline-offset: 4px; }
+.speech-app { max-width: 880px; margin: 0 auto; padding: 32px 32px 20px; }
+.brand { display: flex; align-items: center; gap: 10px; font-family: 'Manrope', system-ui, sans-serif; font-weight: 800; font-size: 21px; letter-spacing: -.7px; }
+.brand-mark { display: grid; place-items: center; width: 35px; height: 39px; background: #17363a; border-radius: 10px; color: #d8eda1; font-size: 27px; }
+.speech-panel { margin: 58px 0 44px; }
+.eyebrow { font-size: 11px; letter-spacing: 2px; font-weight: 700; color: #506546; }
+h1 { font-family: 'Manrope', system-ui, sans-serif; font-size: clamp(32px, 5.5vw, 48px); font-weight: 800; line-height: 1.17; letter-spacing: -1.9px; margin: 16px 0; }
+.intro { color: #526366; margin: 0 0 30px; font-size: 16px; }
+.capture-card { background: #fff; border: 1px solid #dbe1d7; padding: 24px; border-radius: 18px; box-shadow: 0 4px 20px #17363a04; }
+.capture-heading, .transcript-heading, .transcript-meta { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.section-label { font-size: 14px; font-weight: 700; }
+.language-tag { font-size: 12px; padding: 4px 10px; background: #f0f3ea; border-radius: 20px; color: #4b5f4a; }
+.support-note { color: #526366; font-size: 13px; margin: 14px 0 22px; }
+.recording-controls { display: flex; gap: 12px; flex-wrap: wrap; }
+.primary-button, .secondary-button { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 700; }
+.primary-button { background: #173f40; border: 1px solid #173f40; color: #fff; }
+.primary-button:hover:not(:disabled) { background: #245957; }
+.secondary-button { background: #fff; border: 1px solid #bdc9c7; color: #17363a; }
+.secondary-button:hover:not(:disabled) { background: #f0f3ea; }
+.stop-icon { width: 10px; height: 10px; background: currentColor; border-radius: 2px; }
+.listening-status { display: flex; align-items: center; gap: 8px; margin: 20px 0 0; font-size: 13px; color: #526366; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: #8c9b96; }
+.is-listening { color: #236046; font-weight: 700; }
+.is-listening .status-dot { background: #2f8053; box-shadow: 0 0 0 4px #e3f1df; }
+.error-message { color: #8b2525; background: #fff2ef; border: 1px solid #efc6bf; padding: 12px; border-radius: 8px; font-size: 14px; margin: 16px 0 0; }
+.live-preview { border-top: 1px solid #e3e7df; margin-top: 18px; padding-top: 16px; color: #526366; }
+.live-preview p { margin: 8px 0 0; overflow-wrap: anywhere; }
+.transcript-heading { margin: 28px 0 10px; }
+.text-button { color: #315d57; font-size: 13px; background: none; border: none; padding: 8px 0 8px 10px; text-decoration: underline; text-underline-offset: 3px; }
+.transcript-input { display: block; width: 100%; resize: vertical; min-height: 165px; background: #fff; border: 1px solid #cbd5cc; border-radius: 12px; color: #17363a; font-size: 17px; line-height: 1.7; padding: 18px; }
+.transcript-input::placeholder { color: #6d7978; }
+.transcript-input[readonly] { background: #fafff7; }
+.transcript-meta { align-items: flex-start; color: #526366; font-size: 12px; margin-top: 10px; }
+#transcript-count { white-space: nowrap; }
+.privacy-note { color: #526366; font-size: 12px; max-width: 610px; margin: 24px 0 0; }
+.app-footer { padding-top: 18px; border-top: 1px solid #d9dfd4; color: #64736c; font-size: 12px; }
+.braille-sender { border-top: 1px solid #d9dfd4; margin-top: 30px; padding-top: 20px; }
+.braille-sender h2 { font-size: 19px; margin: 0 0 16px; }
+.braille-sender select { display: block; font: inherit; max-width: 100%; margin: 8px 0 16px; padding: 10px; background: white; color: #17363a; border: 1px solid #bdc9c7; border-radius: 8px; }
+.braille-sender select:focus-visible { outline: 3px solid #216dca; outline-offset: 3px; }
+.demo-notice { background: #eef1df; padding: 16px; border: 1px solid #d4dcc0; border-radius: 10px; font-size: 13px; }
+.demo-notice p { margin: 0 0 12px; }
+.sample-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.sample-controls button { min-height: 40px; padding: 8px 12px; }
+.send-button { margin-top: 18px; }
+.compression-review { padding: 16px; margin: 16px 0; border: 1px solid #bdc9c7; border-radius: 10px; }
+.compression-comparison p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.compression-comparison h3 { font-size: 14px; margin: 16px 0 4px; }
+.braille-preview { margin-top: 24px; background: white; border: 1px solid #dbe1d7; border-radius: 14px; padding: 20px; }
+.braille-preview h2 { margin: 0; }
+.preview-text { overflow-wrap: anywhere; }
+.braille-unicode { font-size: 30px; overflow-wrap: anywhere; margin: 12px 0; }
+.braille-page { display: flex; justify-content: center; gap: 18px; margin: 24px 0; }
+.braille-cell { text-align: center; }
+.dot-cell { display: grid; grid-template-columns: repeat(2, 14px); gap: 10px 12px; background: #f0f3ea; border: 1px solid #d4dcc0; border-radius: 10px; padding: 16px; }
+.braille-dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid #aab8ab; background: white; }
+.braille-dot.raised { background: #173f40; border-color: #173f40; }
+.mask-label { display: block; font-size: 11px; color: #526366; margin-top: 6px; }
+.page-controls { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 12px; }
+.page-controls button { min-height: 40px; padding: 8px 10px; font-size: 12px; }
+@media (max-width: 540px) { .speech-app { padding: 22px 20px; } .speech-panel { margin-top: 38px; } .capture-card { padding: 18px; } .recording-controls button { width: 100%; } .transcript-meta { flex-direction: column; gap: 4px; } h1 { letter-spacing: -1.2px; } }
