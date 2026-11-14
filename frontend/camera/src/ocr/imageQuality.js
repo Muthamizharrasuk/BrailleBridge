@@ -49,6 +49,60 @@ export function assessQuality(m, t = THRESHOLDS) {
     : { ok: true, issue: null, message: 'Looks good. Hold still.' };
 }
 
+// Detect a light page against a meaningfully darker background. When the contrast is
+// ambiguous (for example white paper on a white table), return confident:false and do
+// not prevent the existing quality-based auto capture.
+export function detectPageBounds(gray, width, height) {
+  const edge = Math.max(1, Math.round(Math.min(width, height) * 0.06));
+  let borderSum = 0; let borderCount = 0; let centerSum = 0; let centerCount = 0;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const value = gray[y * width + x];
+      if (x < edge || x >= width - edge || y < edge || y >= height - edge) {
+        borderSum += value; borderCount += 1;
+      } else if (x > width * .3 && x < width * .7 && y > height * .3 && y < height * .7) {
+        centerSum += value; centerCount += 1;
+      }
+    }
+  }
+  const border = borderSum / Math.max(1, borderCount);
+  const center = centerSum / Math.max(1, centerCount);
+  if (center - border < 24) return { confident: false };
+
+  const threshold = border + (center - border) * .48;
+  const rowCounts = new Uint32Array(height); const columnCounts = new Uint32Array(width);
+  for (let y = 0; y < height; y += 1) for (let x = 0; x < width; x += 1) {
+    if (gray[y * width + x] >= threshold) { rowCounts[y] += 1; columnCounts[x] += 1; }
+  }
+  const goodRows = Array.from(rowCounts, (count, y) => count >= width * .32 ? y : -1).filter((v) => v >= 0);
+  const goodColumns = Array.from(columnCounts, (count, x) => count >= height * .32 ? x : -1).filter((v) => v >= 0);
+  if (!goodRows.length || !goodColumns.length) return { confident: false };
+  const top = goodRows[0]; const bottom = goodRows.at(-1);
+  const left = goodColumns[0]; const right = goodColumns.at(-1);
+  return {
+    confident: true, left, right, top, bottom,
+    widthRatio: (right - left + 1) / width,
+    heightRatio: (bottom - top + 1) / height,
+    centerX: (left + right) / (2 * width),
+    centerY: (top + bottom) / (2 * height),
+    clipped: left <= edge || right >= width - edge - 1 || top <= edge || bottom >= height - edge - 1,
+  };
+}
+
+export function assessFrame(metrics, bounds) {
+  const quality = assessQuality(metrics);
+  if (!quality.ok || !bounds?.confident) return quality;
+  if (bounds.clipped) return { ok: false, issue: 'pageClipped', message: 'Part of the page is outside the view. Move the phone a little farther away.' };
+  if (bounds.widthRatio < .52 || bounds.heightRatio < .52) {
+    return { ok: false, issue: 'pageSmall', message: 'The page is too small in the view. Move the phone closer.' };
+  }
+  if (bounds.centerX < .4) return { ok: false, issue: 'pageLeft', message: 'Move the phone left to center the page.' };
+  if (bounds.centerX > .6) return { ok: false, issue: 'pageRight', message: 'Move the phone right to center the page.' };
+  if (bounds.centerY < .38) return { ok: false, issue: 'pageHigh', message: 'Move the phone toward the top of the page.' };
+  if (bounds.centerY > .62) return { ok: false, issue: 'pageLow', message: 'Move the phone toward the bottom of the page.' };
+  return { ...quality, pageDetected: true };
+}
+
 export function measureCanvasLike(source, sw, sh, maxSide = 320) {
   const scale = Math.min(1, maxSide / Math.max(sw, sh));
   const w = Math.max(8, Math.round(sw * scale));
@@ -59,4 +113,17 @@ export function measureCanvasLike(source, sw, sh, maxSide = 320) {
   ctx.drawImage(source, 0, 0, w, h);
   const { data } = ctx.getImageData(0, 0, w, h);
   return measureGray(grayFromRgba(data, w, h), w, h);
+}
+
+export function analyzeCanvasLike(source, sw, sh, maxSide = 320) {
+  const scale = Math.min(1, maxSide / Math.max(sw, sh));
+  const width = Math.max(8, Math.round(sw * scale));
+  const height = Math.max(8, Math.round(sh * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = width; canvas.height = height;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  context.drawImage(source, 0, 0, width, height);
+  const pixels = context.getImageData(0, 0, width, height);
+  const gray = grayFromRgba(pixels.data, width, height);
+  return assessFrame(measureGray(gray, width, height), detectPageBounds(gray, width, height));
 }
