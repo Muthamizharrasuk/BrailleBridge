@@ -23,3 +23,18 @@
 .corrections .text-button { padding-left: 0; }
 
 .read-aloud { margin-top: 12px; }
+.accessibility-settings { margin: 0 0 22px; padding: 16px; background: #fafff7; border: 1px solid #d4dcc0; border-radius: 12px; }
+.accessibility-settings h2 { margin: 0; font-size: 18px; }
+.accessibility-settings .support-note { margin: 6px 0 12px; }
+.preference-controls { display: flex; flex-wrap: wrap; gap: 12px 22px; }
+.preference-controls label { display: flex; gap: 8px; align-items: center; min-height: 44px; font-size: 14px; }
+.preference-controls input { width: 20px; height: 20px; }
+.accessible-status { margin: 12px 0 0; padding-top: 12px; border-top: 1px solid #dbe1d7; }
+.scan-page-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 18px 0 0; padding: 14px; border: 1px solid #dbe1d7; border-radius: 10px; }
+.scan-page-controls span { font-weight: 700; font-size: 14px; }
+.reading-status { align-self: center; font-size: 13px; color: #526366; }
+
+@media (max-width: 540px) {
+  .scan-page-controls button, .scan-page-controls span { width: 100%; text-align: center; }
+  .preference-controls { display: block; }
+}

@@ -1,44 +1,51 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { assessQuality, measureCanvasLike } from '../ocr/imageQuality.js';
+import { analyzeCanvasLike } from '../ocr/imageQuality.js';
 import { cameraSupported, describeCameraError } from './webcamErrors.js';
-import { speak } from './speak.js';
 
 export const STEADY_SAMPLES = 4; // consecutive good samples before auto-capture (~2 s)
-const SPEAK_GAP_MS = 2500;
+export const GUIDANCE_STABLE_SAMPLES = 2;
 
-const defaultAnalyze = (video) => assessQuality(measureCanvasLike(video, video.videoWidth, video.videoHeight));
+const defaultAnalyze = (video) => analyzeCanvasLike(video, video.videoWidth, video.videoHeight);
 
 // Live camera with spoken/visible guidance, optional flashlight, and automatic capture,
 // so a user who cannot see the preview still gets a usable photo.
 export default function WebcamCapture({
-  onCapture, onError, disabled, analyze = defaultAnalyze, intervalMs = 500, autoCapture = true,
+  onCapture, onError, disabled, analyze = defaultAnalyze, intervalMs = 300, autoCapture = true,
+  announce, startSignal = 0,
 }) {
   const videoRef = useRef(null);
+  const useCameraRef = useRef(null);
+  const captureButtonRef = useRef(null);
   const streamRef = useRef(null);
   const [active, setActive] = useState(false);
   const [guidance, setGuidance] = useState('');
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
-  const lastSpoken = useRef({ text: '', at: 0 });
+  const candidate = useRef({ key: '', count: 0 });
+  const announcedKey = useRef('');
   const good = useRef(0);
   const done = useRef(false);
   const triedTorch = useRef(false);
 
-  const say = useCallback((text, force = false) => {
-    setGuidance(text);
-    const now = Date.now();
-    if (force || (text !== lastSpoken.current.text && now - lastSpoken.current.at >= SPEAK_GAP_MS)) {
-      lastSpoken.current = { text, at: now };
-      speak(text);
+  const say = useCallback((key, text, { force = false, vibrate } = {}) => {
+    if (!force) {
+      if (candidate.current.key === key) candidate.current.count += 1;
+      else candidate.current = { key, count: 1 };
+      if (candidate.current.count < GUIDANCE_STABLE_SAMPLES || announcedKey.current === key) return;
     }
-  }, []);
+    candidate.current = { key, count: GUIDANCE_STABLE_SAMPLES };
+    announcedKey.current = key;
+    setGuidance(text);
+    announce?.(text, { speak: true, vibrate });
+  }, [announce]);
 
-  const stop = useCallback(() => {
+  const stop = useCallback((restoreFocus = false) => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     setActive(false); setTorchOn(false); setTorchSupported(false); setGuidance('');
+    if (restoreFocus) setTimeout(() => useCameraRef.current?.focus(), 0);
   }, []);
-  useEffect(() => stop, [stop]);
+  useEffect(() => () => stop(false), [stop]);
 
   async function setTorch(on) {
     const track = streamRef.current?.getVideoTracks?.()[0];
@@ -61,20 +68,30 @@ export default function WebcamCapture({
       });
       streamRef.current = stream;
       good.current = 0; done.current = false; triedTorch.current = false;
+      candidate.current = { key: '', count: 0 }; announcedKey.current = '';
       const track = stream.getVideoTracks?.()[0];
       setTorchSupported(Boolean(track?.getCapabilities?.().torch));
       setActive(true);
       onError('');
-      say('Camera on. Hold the phone about a hand length above the page. I will tell you when it looks good and take the photo for you.', true);
+      say('cameraReady', 'Camera ready. Hold over the page.', { force: true });
     } catch (error) {
       onError(describeCameraError(error));
     }
   }
 
+  const handledStartSignal = useRef(0);
+  useEffect(() => {
+    if (startSignal > handledStartSignal.current && !active && !disabled) {
+      handledStartSignal.current = startSignal;
+      start();
+    }
+  }, [startSignal, active, disabled]);
+
   useEffect(() => {
     if (active && videoRef.current && streamRef.current) {
       videoRef.current.srcObject = streamRef.current;
       videoRef.current.play?.().catch(() => {});
+      setTimeout(() => captureButtonRef.current?.focus(), 0);
     }
   }, [active]);
 
@@ -90,10 +107,11 @@ export default function WebcamCapture({
     canvas.toBlob((blob) => {
       if (!blob) { done.current = false; onError('Could not capture a photo. Please try again.'); return; }
       stop();
-      speak(automatic ? 'Photo taken.' : 'Photo taken. Reading the text.');
+      announce?.('Page captured.',
+        { speak: true, vibrate: [45, 35, 45] });
       onCapture(blob);
     }, 'image/jpeg', 0.92);
-  }, [onCapture, onError, stop]);
+  }, [announce, onCapture, onError, stop]);
 
   // Judge the live view and coach the user.
   useEffect(() => {
@@ -105,14 +123,25 @@ export default function WebcamCapture({
       try { result = analyze(video); } catch { return; }
       if (result.ok) {
         good.current += 1;
-        say(result.message);
+        say('ready', 'Hold steady.', { vibrate: 30 });
         if (autoCapture && good.current >= STEADY_SAMPLES) capture(true);
       } else {
         good.current = 0;
-        say(result.message);
+        const guidance = {
+          dark: 'More light.',
+          lowContrast: 'Move closer.',
+          blurry: 'Hold steady.',
+          pageClipped: 'Move farther.',
+          pageSmall: 'Move closer.',
+          pageLeft: 'Move left.',
+          pageRight: 'Move right.',
+          pageHigh: 'Move up.',
+          pageLow: 'Move down.',
+        };
+        say(result.issue || 'adjust', guidance[result.issue] || result.message);
         if (result.issue === 'dark' && torchSupported && !torchOn && !triedTorch.current) {
           triedTorch.current = true;
-          if (await setTorch(true)) say('It was dark, so I turned on the flashlight.', true);
+          if (await setTorch(true)) say('torch', 'More light. Flash on.', { force: true });
         }
       }
     }, intervalMs);
@@ -121,14 +150,14 @@ export default function WebcamCapture({
 
   return <div className="webcam">
     {active && <video ref={videoRef} className="webcam-video" playsInline muted aria-label="Camera preview" />}
-    <p className="guidance" role="status" aria-live="polite">{guidance}</p>
+    <p className="guidance" role="status" aria-live={announce ? 'off' : 'polite'}>{guidance}</p>
     <div className="recording-controls">
       {!active
-        ? <button type="button" className="secondary-button" onClick={start} disabled={disabled}>Use camera</button>
+        ? <button ref={useCameraRef} type="button" className="secondary-button" onClick={start} disabled={disabled}>Use camera</button>
         : <>
-          <button type="button" className="primary-button" onClick={() => capture(false)}>Take photo now</button>
+          <button ref={captureButtonRef} type="button" className="primary-button" onClick={() => capture(false)}>Take photo now</button>
           {torchSupported && <button type="button" className="secondary-button" aria-pressed={torchOn} onClick={() => setTorch(!torchOn)}>{torchOn ? 'Turn light off' : 'Turn light on'}</button>}
-          <button type="button" className="secondary-button" onClick={stop}>Cancel camera</button>
+          <button type="button" className="secondary-button" onClick={() => stop(true)}>Cancel camera</button>
         </>}
     </div>
   </div>;

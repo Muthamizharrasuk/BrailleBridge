@@ -135,6 +135,58 @@ describe('CameraPanel blind-first reporting', () => {
     await user.click(screen.getByRole('button', { name: /stop reading/i }));
     expect(cancel).toHaveBeenCalled();
   });
+
+  it('pauses, resumes, and reports read-aloud state', async () => {
+    const user = userEvent.setup();
+    const pause = vi.fn(); const resume = vi.fn();
+    vi.stubGlobal('speechSynthesis', { speak: vi.fn(), cancel: vi.fn(), pause, resume });
+    vi.stubGlobal('SpeechSynthesisUtterance', function U(t) { this.text = t; });
+    render(<CameraPanel ocr={vi.fn()} translate={vi.fn()} tools={{}} />);
+    await user.type(screen.getByLabelText(/check the text/i), 'Hello there');
+    await user.click(screen.getByRole('button', { name: /read the text aloud/i }));
+    expect(screen.getByText(/Reading status: playing/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /pause reading/i }));
+    expect(pause).toHaveBeenCalled();
+    expect(screen.getByText(/Reading status: paused/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /resume reading/i }));
+    expect(resume).toHaveBeenCalled();
+    expect(screen.getByText(/Reading status: playing/i)).toBeInTheDocument();
+  });
+});
+
+describe('CameraPanel continuous book scanning', () => {
+  it('saves pages independently and navigates without confusing Braille pages', async () => {
+    const user = userEvent.setup();
+    const ocr = vi.fn().mockResolvedValueOnce('First page text').mockResolvedValueOnce('Second page text');
+    render(<CameraPanel ocr={ocr} translate={vi.fn()} tools={{}} />);
+    const upload = screen.getByLabelText('Upload image');
+    await user.upload(upload, png());
+    expect(await screen.findByDisplayValue('First page text')).toHaveFocus();
+    await user.type(screen.getByLabelText(/check the text/i), ' edited');
+    await user.upload(upload, png());
+    expect(await screen.findByDisplayValue('Second page text')).toBeInTheDocument();
+    expect(screen.getByText('Scanned page 2 of 2')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /previous scanned page/i }));
+    expect(screen.getByDisplayValue('First page text edited')).toBeInTheDocument();
+    expect(screen.getByText('Scanned page 1 of 2')).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: /next scanned page/i }));
+    expect(screen.getByDisplayValue('Second page text')).toBeInTheDocument();
+  });
+
+  it('preserves each scanned page Braille translation', async () => {
+    const user = userEvent.setup();
+    const ocr = vi.fn().mockResolvedValueOnce('one').mockResolvedValueOnce('two');
+    const translate = vi.fn().mockResolvedValue(result);
+    render(<CameraPanel ocr={ocr} translate={translate} tools={{}} />);
+    const upload = screen.getByLabelText('Upload image');
+    await user.upload(upload, png());
+    await user.click(screen.getByRole('button', { name: /translate to braille/i }));
+    expect(await screen.findByLabelText(/Braille translation for scanned page 1/i)).toBeInTheDocument();
+    await user.upload(upload, png());
+    expect(screen.queryByLabelText(/Braille translation for scanned page 2/i)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /previous scanned page/i }));
+    expect(screen.getByLabelText(/Braille translation for scanned page 1/i)).toBeInTheDocument();
+  });
 });
 
 describe('CameraPanel corrections', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assessQuality, grayFromRgba, measureGray } from './imageQuality.js';
+import { assessFrame, assessQuality, detectPageBounds, grayFromRgba, measureGray } from './imageQuality.js';
 
 const flat = (v, w = 20, h = 20) => ({ gray: new Float32Array(w * h).fill(v), w, h });
 const stripes = (w = 20, h = 20) => {
@@ -34,5 +34,32 @@ describe('image quality', () => {
   });
   it('accepts a good image', () => {
     expect(assessQuality({ brightness: 220, contrast: 46, sharpness: 13000 })).toMatchObject({ ok: true });
+  });
+});
+
+describe('page framing', () => {
+  function pageFrame(width = 100, height = 120, box = { left: 15, right: 84, top: 15, bottom: 104 }) {
+    const gray = new Float32Array(width * height).fill(45);
+    for (let y = box.top; y <= box.bottom; y += 1) for (let x = box.left; x <= box.right; x += 1) gray[y * width + x] = 225;
+    // Add dark text-like stripes so the fixture is not an unrealistically flat page.
+    for (let y = box.top + 10; y < box.bottom - 5; y += 8) for (let x = box.left + 8; x < box.right - 8; x += 1) gray[y * width + x] = 35;
+    return { gray, width, height };
+  }
+
+  it('finds a centered page with visible margins', () => {
+    const sample = pageFrame();
+    const bounds = detectPageBounds(sample.gray, sample.width, sample.height);
+    expect(bounds).toMatchObject({ confident: true, clipped: false });
+    expect(bounds.widthRatio).toBeGreaterThan(.6);
+  });
+
+  it('does not claim detection when page/background contrast is ambiguous', () => {
+    expect(detectPageBounds(new Float32Array(100 * 120).fill(220), 100, 120)).toEqual({ confident: false });
+  });
+
+  it('blocks reliable auto capture when a detected page is clipped or too small', () => {
+    const quality = { brightness: 210, contrast: 40, sharpness: 1000 };
+    expect(assessFrame(quality, { confident: true, clipped: true })).toMatchObject({ ok: false, issue: 'pageClipped' });
+    expect(assessFrame(quality, { confident: true, clipped: false, widthRatio: .4, heightRatio: .7 })).toMatchObject({ ok: false, issue: 'pageSmall' });
   });
 });
