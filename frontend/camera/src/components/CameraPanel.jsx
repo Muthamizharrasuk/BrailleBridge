@@ -35,7 +35,10 @@ function ScanDetails({ info, text, onUndo }) {
 }
 
 // Props allow injection for tests / later integration.
-export default function CameraPanel({ ocr = recognizeBest, translate = translateCamera, tools = browserTools }) {
+export default function CameraPanel({
+  ocr = recognizeBest, translate = translateCamera, tools = browserTools,
+  grade = 1, onTranslation, showPreview = true,
+}) {
   const feedback = useAccessibleFeedback();
   const reader = useReadAloud({ announce: feedback.announce });
   const [pages, setPages] = useState([]);
@@ -70,6 +73,7 @@ export default function CameraPanel({ ocr = recognizeBest, translate = translate
   async function scan(file, cameraCapture = false) {
     const id = ++run.current;
     sendRun.current += 1; // invalidate in-flight translation
+    onTranslation?.(null);
     setOcrError(''); setCameraError('');
     try { validateImageFile(file); } catch (e) { setOcrError(e.message); return; }
     setOcrState({ status: 'working', progress: 0, label: 'Opening the photo…' });
@@ -131,11 +135,12 @@ export default function CameraPanel({ ocr = recognizeBest, translate = translate
     if (current) updateCurrent({ api: loading }); else setDraftApi(loading);
     feedback.announce(`Translating${targetPage ? ` scanned page ${targetPage}` : ' the text'} to Braille.`, { vibrate: 20 });
     try {
-      const result = await translate(text);
+      const result = grade === 1 ? await translate(text) : await translate(text, { grade });
       if (id === sendRun.current) {
         const success = { status: 'success', error: '', result, sentText: text };
         if (targetPage) setPages((all) => all.map((page) => page.id === targetPage ? { ...page, api: success } : page));
         else setDraftApi(success);
+        onTranslation?.({ result, text, grade, source: 'camera' });
         feedback.announce(`Braille translation ready${targetPage ? ` for scanned page ${targetPage}` : ''}.`, { vibrate: [30, 30, 30] });
       }
     } catch (e) {
@@ -150,6 +155,7 @@ export default function CameraPanel({ ocr = recognizeBest, translate = translate
 
   function edit(value) {
     sendRun.current += 1; // a result for older text must not look current
+    onTranslation?.(null);
     const clearedApi = { status: 'idle', error: '', result: null, sentText: '' };
     if (current) updateCurrent({ text: value, api: clearedApi });
     else { setDraftText(value); setDraftApi(clearedApi); }
@@ -178,7 +184,7 @@ export default function CameraPanel({ ocr = recognizeBest, translate = translate
     <AccessibleFeedback feedback={feedback} />
 
     <div className="capture-card">
-      <div className="capture-heading"><span className="section-label">1. Add a photo</span><span className="language-tag">English · Grade 1</span></div>
+      <div className="capture-heading"><span className="section-label">1. Add a photo</span><span className="language-tag">English · Grade {grade}</span></div>
       <div className="camera-actions">
         <label className="secondary-button file-button">
           Upload image
@@ -226,8 +232,8 @@ export default function CameraPanel({ ocr = recognizeBest, translate = translate
       {api.error && <p className="error-message" role="alert">{api.error}</p>}
     </div>
 
-    {api.result && <div aria-label={`Braille translation for ${current ? `scanned page ${current.id}` : 'typed text'}`}>
-      <BraillePreview key={`${current?.id ?? 'draft'}-${api.sentText}`} translation={api.result} text={api.sentText} demo={false} />
+    {showPreview && api.result && <div aria-label={`Braille translation for ${current ? `scanned page ${current.id}` : 'typed text'}`}>
+      <BraillePreview key={`${current?.id ?? 'draft'}-${api.sentText}`} translation={api.result} text={api.sentText} demo={false} grade={grade} />
     </div>}
   </section>;
 }

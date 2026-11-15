@@ -10,7 +10,7 @@ function Cell({ mask, padded }) {
   </div>;
 }
 
-export default function BraillePreview({ translation, text, demo }) {
+export default function BraillePreview({ translation, text, demo, grade = 1 }) {
   const [page, setPage] = useState(0);
   return <section className="braille-preview" aria-labelledby="braille-preview-heading">
     <div className="capture-heading">
@@ -19,7 +19,7 @@ export default function BraillePreview({ translation, text, demo }) {
     </div>
     <p className="preview-text">Message: <q>{text}</q></p>
     <p className="braille-unicode" aria-label={`Braille Unicode: ${translation.braille_unicode}`}>{translation.braille_unicode || '(No Braille cells returned)'}</p>
-    <p className="support-note">{translation.cell_count} Braille cells · {translation.pages.length} three-cell pages · Grade 1</p>
+    <p className="support-note">{translation.cell_count} Braille cells · {translation.pages.length} three-cell pages · Grade {grade}</p>
     {translation.pages.length > 0 && <>
       <div className="braille-page" aria-label={`Three-cell page ${page + 1}`}>
         {translation.pages[page].map((mask, index) => <Cell key={index} mask={mask} padded={page * 3 + index >= translation.cell_count} />)}
