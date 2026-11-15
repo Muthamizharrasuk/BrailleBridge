@@ -6,6 +6,11 @@
 .webcam-video { width: 100%; max-width: 520px; border-radius: 12px; background: #000; margin-bottom: 12px; display: block; }
 .scan-image { display: block; max-width: 100%; max-height: 260px; margin: 18px 0 0; border-radius: 10px; border: 1px solid #dbe1d7; }
 .guidance { margin: 0 0 12px; font-size: 16px; font-weight: 700; color: #173f40; min-height: 1.5em; }
+.capture-mode { display: flex; flex-wrap: wrap; gap: 10px 22px; margin: 0; padding: 12px; border: 1px solid #dbe1d7; border-radius: 10px; }
+.capture-mode legend { padding: 0 6px; font-weight: 700; }
+.capture-mode label { display: flex; align-items: center; gap: 7px; min-height: 44px; }
+.capture-mode input { width: 20px; height: 20px; }
+.countdown-status { min-height: 1.5em; margin: 0 0 8px; color: #315d57; font-weight: 700; }
 .scan-note { margin: 16px 0 0; padding: 12px; border-radius: 8px; font-size: 14px; border: 1px solid; }
 .scan-reliable { background: #eef8ec; border-color: #bcd9b8; color: #1f5a37; }
 .scan-caution { background: #fff8e6; border-color: #ecd9a0; color: #6b4e00; }

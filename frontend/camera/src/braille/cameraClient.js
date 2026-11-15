@@ -1,15 +1,16 @@
 import { validateTranslation } from '../../../speech/src/braille/client.js';
 
-// Contract: source "camera", mode "verbatim", grade 1. Text is sent exactly as reviewed.
-export function makeCameraRequest(text) {
+// Contract: source "camera", mode "verbatim". Text is sent exactly as reviewed.
+export function makeCameraRequest(text, grade = 1) {
   if (typeof text !== 'string' || !text.trim()) throw new Error('There is no text to translate. Scan a page or type some text first.');
-  return { source: 'camera', text, mode: 'verbatim', grade: 1 };
+  if (![1, 2].includes(grade)) throw new Error('Unsupported Braille grade.');
+  return { source: 'camera', text, mode: 'verbatim', grade };
 }
 
 export async function translateCamera(text, {
-  endpoint = '/api/braille/translate', fetchImpl = globalThis.fetch, signal, timeoutMs = 15000,
+  endpoint = '/api/braille/translate', fetchImpl = globalThis.fetch, signal, timeoutMs = 15000, grade = 1,
 } = {}) {
-  const request = makeCameraRequest(text);
+  const request = makeCameraRequest(text, grade);
   const controller = new AbortController();
   const cancel = () => controller.abort();
   if (signal?.aborted) controller.abort();

@@ -15,7 +15,7 @@ export default function useReadAloud({ announce }) {
     if (announceStatus) announce('Reading stopped.', { vibrate: 30 });
   }, [announce]);
 
-  const play = useCallback((text, pageId) => {
+  const play = useCallback((text, pageId, spokenLabel) => {
     const token = ++session.current;
     if (!text.trim()) return;
     stopSpeech();
@@ -25,7 +25,8 @@ export default function useReadAloud({ announce }) {
     const remaining = text.slice(effectiveOffset);
     if (!effectiveOffset) positions.current.set(pageId, 0);
     setState({ status: 'playing', pageId });
-    announce(pageId === 'draft' ? 'Reading typed text.' : `Reading scanned page ${pageId}.`, { vibrate: 25 });
+    const label = spokenLabel || (pageId === 'draft' ? 'typed text' : `scanned page ${pageId}`);
+    announce(`Reading ${label}.`, { vibrate: 25 });
     speak(remaining, {
       onBoundary: (event) => {
         if (token === session.current && typeof event.charIndex === 'number') positions.current.set(pageId, effectiveOffset + event.charIndex);
@@ -35,7 +36,7 @@ export default function useReadAloud({ announce }) {
         positions.current.set(pageId, 0);
         active.current = { pageId: null, offset: 0 };
         setState({ status: 'idle', pageId: null });
-        announce(pageId === 'draft' ? 'Finished reading typed text.' : `Finished reading scanned page ${pageId}.`, { vibrate: [30, 40, 30] });
+        announce(`Finished reading ${label}.`, { vibrate: [30, 40, 30] });
       },
     });
   }, [announce]);

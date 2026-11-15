@@ -2,7 +2,7 @@ import React from 'react';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import WebcamCapture, { GUIDANCE_STABLE_SAMPLES, STEADY_SAMPLES } from './WebcamCapture.jsx';
+import WebcamCapture, { AUTO_STABLE_MS, GUIDANCE_STABLE_SAMPLES } from './WebcamCapture.jsx';
 
 function fakeStream({ torch = false } = {}) {
   const track = { stop: vi.fn(), getCapabilities: () => ({ torch }), applyConstraints: vi.fn().mockResolvedValue() };
@@ -22,23 +22,87 @@ afterEach(() => vi.useRealTimers());
 const tick = (ms) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
 
 describe('WebcamCapture guidance', () => {
-  it('coaches the user, then captures automatically once the view is steady', async () => {
+  it('defaults to manual mode and never auto-captures a stable page', async () => {
     const stream = fakeStream();
     vi.stubGlobal('navigator', { mediaDevices: { getUserMedia: vi.fn().mockResolvedValue(stream) } });
-    const analyze = vi.fn()
-      .mockReturnValueOnce({ ok: false, issue: 'blurry', message: 'The image is blurry.' })
-      .mockReturnValueOnce({ ok: false, issue: 'blurry', message: 'The image is blurry.' })
-      .mockReturnValue({ ok: true, issue: null, message: 'Looks good. Hold still.' });
     const onCapture = vi.fn();
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    render(<WebcamCapture onCapture={onCapture} onError={vi.fn()} analyze={analyze} intervalMs={100} />);
+    render(<WebcamCapture onCapture={onCapture} onError={vi.fn()} intervalMs={100}
+      analyze={() => ({ ok: true, pageDetected: true })} />);
+    expect(screen.getByRole('radio', { name: /manual/i })).toBeChecked();
     await user.click(screen.getByRole('button', { name: /use camera/i }));
-    await tick(100 * GUIDANCE_STABLE_SAMPLES);
-    expect(screen.getByRole('status')).toHaveTextContent('Hold steady');
+    await tick(AUTO_STABLE_MS + 1000);
     expect(onCapture).not.toHaveBeenCalled();
-    await tick(100 * STEADY_SAMPLES + 50);
+  });
+
+  it('requires four continuous seconds of a detected, stable page in automatic mode', async () => {
+    const stream = fakeStream();
+    vi.stubGlobal('navigator', { mediaDevices: { getUserMedia: vi.fn().mockResolvedValue(stream) } });
+    const onCapture = vi.fn();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<WebcamCapture onCapture={onCapture} onError={vi.fn()} analyze={() => ({ ok: true, pageDetected: true })}
+      intervalMs={100} initialMode="automatic" />);
+    await user.click(screen.getByRole('button', { name: /use camera/i }));
+    await tick(AUTO_STABLE_MS - 100);
+    expect(onCapture).not.toHaveBeenCalled();
+    await tick(250);
     expect(onCapture).toHaveBeenCalledTimes(1);
     expect(stream.track.stop).toHaveBeenCalled();
+  });
+
+  it('resets automatic countdown after movement or poor quality', async () => {
+    vi.stubGlobal('navigator', { mediaDevices: { getUserMedia: vi.fn().mockResolvedValue(fakeStream()) } });
+    let result = { ok: true, pageDetected: true };
+    const onCapture = vi.fn();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<WebcamCapture onCapture={onCapture} onError={vi.fn()} analyze={() => result}
+      intervalMs={100} initialMode="automatic" />);
+    await user.click(screen.getByRole('button', { name: /use camera/i }));
+    await tick(2500);
+    result = { ok: true, pageDetected: true, motion: true };
+    await tick(150);
+    result = { ok: false, issue: 'dark' };
+    await tick(150);
+    result = { ok: true, pageDetected: true };
+    await tick(3000);
+    expect(onCapture).not.toHaveBeenCalled();
+    await tick(1200);
+    expect(onCapture).toHaveBeenCalledTimes(1);
+  });
+
+  it('switches modes without restarting the active camera', async () => {
+    const getUserMedia = vi.fn().mockResolvedValue(fakeStream());
+    vi.stubGlobal('navigator', { mediaDevices: { getUserMedia } });
+    const onCapture = vi.fn();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<WebcamCapture onCapture={onCapture} onError={vi.fn()} analyze={() => ({ ok: true, pageDetected: true })}
+      intervalMs={100} />);
+    await user.click(screen.getByRole('button', { name: /use camera/i }));
+    await user.click(screen.getByRole('radio', { name: /automatic/i }));
+    expect(getUserMedia).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(/Automatic capture selected/i)).toBeInTheDocument();
+    await tick(AUTO_STABLE_MS + 200);
+    expect(onCapture).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not repeat an automatic capture until Scan Next Page signals rearming', async () => {
+    vi.stubGlobal('navigator', { mediaDevices: { getUserMedia: vi.fn().mockResolvedValue(fakeStream()) } });
+    const onCapture = vi.fn();
+    const { rerender } = render(<WebcamCapture onCapture={onCapture} onError={vi.fn()}
+      analyze={() => ({ ok: true, pageDetected: true })} intervalMs={100} initialMode="automatic" startSignal={0} />);
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    await user.click(screen.getByRole('button', { name: /use camera/i }));
+    await tick(AUTO_STABLE_MS + 200);
+    expect(onCapture).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: /use camera/i }));
+    await tick(AUTO_STABLE_MS + 300);
+    expect(onCapture).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: /cancel camera/i }));
+    rerender(<WebcamCapture onCapture={onCapture} onError={vi.fn()}
+      analyze={() => ({ ok: true, pageDetected: true })} intervalMs={100} initialMode="automatic" startSignal={1} />);
+    await tick(10);
+    await tick(AUTO_STABLE_MS + 300);
+    expect(onCapture).toHaveBeenCalledTimes(2);
   });
 
   it('replaces guidance quickly after a genuinely changed state without repeating samples', async () => {
@@ -54,7 +118,7 @@ describe('WebcamCapture guidance', () => {
     await user.click(screen.getByRole('button', { name: /use camera/i }));
     await tick(450);
     expect(announce.mock.calls.map(([message]) => message)).toEqual([
-      'Camera ready. Hold over the page.', 'More light.', 'Move closer.',
+      'Camera ready. Capture when ready.', 'More light.', 'Move closer.',
     ]);
     await tick(500);
     expect(announce).toHaveBeenCalledTimes(3);
@@ -95,10 +159,10 @@ describe('WebcamCapture guidance', () => {
     vi.stubGlobal('navigator', { mediaDevices: { getUserMedia: vi.fn().mockResolvedValue(fakeStream()) } });
     const onCapture = vi.fn();
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    render(<WebcamCapture onCapture={onCapture} onError={vi.fn()} autoCapture={false}
+    render(<WebcamCapture onCapture={onCapture} onError={vi.fn()}
       analyze={() => ({ ok: false, message: 'x' })} />);
     await user.click(screen.getByRole('button', { name: /use camera/i }));
-    await user.click(screen.getByRole('button', { name: /take photo now/i }));
+    await user.click(screen.getByRole('button', { name: /capture page/i }));
     expect(onCapture).toHaveBeenCalledTimes(1);
   });
 });

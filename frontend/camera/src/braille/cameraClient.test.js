@@ -8,6 +8,9 @@ describe('camera Braille client', () => {
   it('builds the contract request', () => {
     expect(makeCameraRequest('abc')).toEqual({ source: 'camera', text: 'abc', mode: 'verbatim', grade: 1 });
   });
+  it('supports Grade 2 for the unified app', () => {
+    expect(makeCameraRequest('abc', 2)).toEqual({ source: 'camera', text: 'abc', mode: 'verbatim', grade: 2 });
+  });
   it('preserves text exactly and rejects blank text', () => {
     expect(makeCameraRequest(' a\nb ').text).toBe(' a\nb ');
     expect(() => makeCameraRequest('  \n')).toThrow(/no text/i);

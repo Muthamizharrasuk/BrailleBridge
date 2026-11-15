@@ -46,6 +46,19 @@ describe('CameraPanel', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Cannot reach the Braille API');
   });
 
+  it('passes Grade 2 through and reports unified output', async () => {
+    const user = userEvent.setup();
+    const translate = vi.fn().mockResolvedValue(result);
+    const onTranslation = vi.fn();
+    render(<CameraPanel ocr={vi.fn()} translate={translate} grade={2} showPreview={false} onTranslation={onTranslation} />);
+    await user.type(screen.getByLabelText(/check the text/i), 'hi');
+    await user.click(screen.getByRole('button', { name: /translate to braille/i }));
+    await waitFor(() => expect(onTranslation).toHaveBeenCalled());
+    expect(translate).toHaveBeenCalledWith('hi', { grade: 2 });
+    expect(onTranslation).toHaveBeenCalledWith({ result, text: 'hi', grade: 2, source: 'camera' });
+    expect(screen.queryByText(/Braille preview/)).not.toBeInTheDocument();
+  });
+
   it('rejects non-image uploads without running OCR', async () => {
     const ocr = vi.fn();
     render(<CameraPanel ocr={ocr} translate={vi.fn()} />);
