@@ -4,7 +4,8 @@ import AccessibleFeedback from '../accessibility/AccessibleFeedback.jsx';
 import useAccessibleFeedback from '../accessibility/useAccessibleFeedback.js';
 import useReadAloud from '../accessibility/useReadAloud.js';
 import { translateCamera } from '../braille/cameraClient.js';
-import { recognizeBest, validateImageFile } from '../ocr/ocr.js';
+import { validateImageFile } from '../ocr/ocr.js';
+import { recognizeOnBoard } from '../ocr/boardOcr.js';
 import { buildReport } from '../ocr/report.js';
 import { browserTools } from '../ocr/imageTools.js';
 import WebcamCapture from './WebcamCapture.jsx';
@@ -36,7 +37,7 @@ function ScanDetails({ info, text, onUndo }) {
 
 // Props allow injection for tests / later integration.
 export default function CameraPanel({
-  ocr = recognizeBest, translate = translateCamera, tools = browserTools,
+  ocr = recognizeOnBoard, translate = translateCamera, tools = browserTools,
   grade = 1, onTranslation, showPreview = true,
 }) {
   const feedback = useAccessibleFeedback();

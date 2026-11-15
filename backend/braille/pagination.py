@@ -21,7 +21,9 @@ def format_serial_command(page: Sequence[int]) -> str:
     for m in page:
         if not isinstance(m, int) or isinstance(m, bool) or not 0 <= m <= 63:
             raise ValueError(f"cell mask out of range 0-63: {m!r}")
-    return "P," + ",".join(str(m) for m in page) + "\n"
+    from backend.hardware.mask_transform import to_firmware
+    firmware_masks = to_firmware(page)
+    return "P," + ",".join(str(m) for m in firmware_masks) + "\n"
 
 
 class BraillePager:

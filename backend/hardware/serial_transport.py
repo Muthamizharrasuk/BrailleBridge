@@ -131,6 +131,13 @@ class SerialTransport:
         }
 
     def send_page(self, cells: Sequence[int], force: bool = False) -> SendResult:
+        from backend.hardware.safety import motor_commands_enabled
+
+        if not motor_commands_enabled():
+            raise SerialTransportError(
+                "Motor commands are disabled until servo power is verified."
+            )
+
         command = format_serial_command(cells)
         with self._lock:
             self.connect()

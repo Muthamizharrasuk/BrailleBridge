@@ -10,9 +10,9 @@ export default function SpeechFeature({ grade }) {
   return <section className="feature-workspace" aria-labelledby="speech-heading">
     <p className="eyebrow">SPEECH TO BRAILLE</p>
     <h1 id="speech-heading">Speak, review, translate.</h1>
-    <p className="intro">Use your browser microphone, then correct the transcript before sending it to Liblouis.</p>
+    <p className="intro">Record with your microphone, transcribe offline on the Arduino UNO Q, then review the text before Braille conversion.</p>
     <div className="workspace-card">
-      <div className="section-heading-row"><span className="section-label">Microphone</span><span className="grade-badge">English (US)</span></div>
+      <div className="section-heading-row"><span className="section-label">Microphone</span><span className="grade-badge">Whistle · On-device</span></div>
       <p className="support-note">{speech.message}</p>
       <div className="recording-controls">
         <button className="primary-button" type="button" onClick={speech.start} disabled={!speech.supported || busy}>Start listening</button>
@@ -31,7 +31,7 @@ export default function SpeechFeature({ grade }) {
         onChange={(event) => speech.setTranscript(event.target.value)} placeholder="Your speech appears here. You can also type." />
       <div className="transcript-meta"><span>{busy ? 'Stop listening before editing.' : 'Review the transcript before translating.'}</span><span>{speech.transcript.length} characters</span></div>
       <TranslationPanel text={speech.transcript} source="speech" grade={grade} disabled={busy} />
-      <p className="privacy-note">Speech recognition is provided by your browser and may use its speech service. Only reviewed text is sent to the Braille API.</p>
+      <p className="privacy-note">Microphone audio is sent over the local connection to Cactus Whistle on the UNO Q. Speech recognition does not use a cloud service.</p>
     </div>
   </section>;
 }

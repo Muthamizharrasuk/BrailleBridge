@@ -35,8 +35,31 @@ describe('unified app shell', () => {
 
   it('translates Grade 2 text and navigates three-cell Braille pages', async () => {
     const user = userEvent.setup();
-    const fetchMock = vi.fn(async (url) => ({ ok: true, json: async () => url === '/api/hardware/status'
-      ? { state: 'simulation', configured: false, connected: false, port: null } : result }));
+    let displayPage = 1;
+    const fetchMock = vi.fn(async (url) => {
+      let data;
+      if (url === '/api/hardware/status') {
+        data = { state: 'simulation', configured: false, connected: false, port: null };
+      } else if (url === '/api/display/load' || url === '/api/display/restart') {
+        displayPage = 1;
+      } else if (url === '/api/display/next') {
+        displayPage = Math.min(2, displayPage + 1);
+      } else if (url === '/api/display/previous') {
+        displayPage = Math.max(1, displayPage - 1);
+      } else if (url === '/api/braille/translate') {
+        data = result;
+      }
+
+      if (url.startsWith('/api/display/')) {
+        data = {
+          page: displayPage,
+          total: 2,
+          cells: result.pages[displayPage - 1],
+        };
+      }
+      if (!data) throw new Error(`Unexpected request: ${url}`);
+      return { ok: true, json: async () => data };
+    });
     vi.stubGlobal('fetch', fetchMock);
     render(<App />);
     await user.click(screen.getByLabelText('Grade 2'));
@@ -48,7 +71,7 @@ describe('unified app shell', () => {
     expect(JSON.parse(translationCall[1].body)).toMatchObject({ source: 'text', grade: 2, text: 'abcd' });
     expect(screen.getByText(/Braille page 1 of 2/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /next braille page/i }));
-    expect(screen.getByText(/Braille page 2 of 2/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/Braille page 2 of 2/)).toBeInTheDocument());
     expect(screen.getAllByText(/No serial port is configured/i).length).toBeGreaterThan(0);
     await waitFor(() => expect(screen.getAllByText('Padding')).toHaveLength(2));
   });

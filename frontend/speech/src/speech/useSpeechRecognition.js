@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { createBrowserRecognition, getSpeechSupport } from './browserRecognition.js';
+import { createWhistleRecognition, getSpeechSupport } from './whistleRecognition.js';
 
 export function useSpeechRecognition() {
   const adapter = useRef(null);
@@ -8,7 +8,7 @@ export function useSpeechRecognition() {
   }));
 
   useEffect(() => {
-    const instance = createBrowserRecognition({ onChange: setState });
+    const instance = createWhistleRecognition({ onChange: setState });
     adapter.current = instance;
     setState(instance.getSnapshot());
     return () => {
