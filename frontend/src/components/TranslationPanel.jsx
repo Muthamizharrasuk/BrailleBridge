@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { translateToBraille } from '../braille/client.js';
 import UnifiedBraillePreview from './UnifiedBraillePreview.jsx';
 
-export default function TranslationPanel({ text, source, grade, disabled = false, label = 'Translate to Braille' }) {
+export default function TranslationPanel({ text, source, sourceLabel = source, grade, disabled = false, label = 'Translate to Braille' }) {
   const [state, setState] = useState({ status: 'idle', error: '', result: null, submittedText: '' });
   const request = useRef({ id: 0, controller: null });
   useEffect(() => {
@@ -29,6 +29,6 @@ export default function TranslationPanel({ text, source, grade, disabled = false
     </button>
     {state.status === 'loading' && <p className="inline-status" role="status">Translating with Liblouis…</p>}
     {state.error && <p className="error-message" role="alert">{state.error}</p>}
-    {state.result && <UnifiedBraillePreview translation={state.result} text={state.submittedText} grade={grade} source={source} />}
+    {state.result && <UnifiedBraillePreview translation={state.result} text={state.submittedText} grade={grade} source={sourceLabel} />}
   </>;
 }

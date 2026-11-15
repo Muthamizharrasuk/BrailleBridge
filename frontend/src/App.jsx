@@ -1,6 +1,7 @@
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { translateToBraille } from './braille/client.js';
 import UnifiedBraillePreview from './components/UnifiedBraillePreview.jsx';
+import HardwareStatusSection from './components/HardwareStatusSection.jsx';
 import DocumentFeature from './features/DocumentFeature.jsx';
 import SpeechFeature from './features/SpeechFeature.jsx';
 import TextFeature from './features/TextFeature.jsx';
@@ -11,7 +12,7 @@ const features = [
   { id: 'text', number: '01', title: 'Text to Braille', description: 'Type or paste text and translate with Liblouis.', status: 'Available' },
   { id: 'speech', number: '02', title: 'Speech to Braille', description: 'Capture speech, review the transcript, then translate.', status: 'Available' },
   { id: 'camera', number: '03', title: 'Camera to Braille', description: 'Photograph printed pages with accessible guidance.', status: 'Available' },
-  { id: 'document', number: '04', title: 'Document to Braille', description: 'A prepared home for future PDF and document import.', status: 'Planned' },
+  { id: 'document', number: '04', title: 'Document to Braille', description: 'Extract and review PDF, TXT, or DOCX text privately.', status: 'Available' },
 ];
 
 const route = () => {
@@ -34,7 +35,7 @@ function Home() {
       <div>
         <p className="eyebrow">ONE BRIDGE · MANY WAYS TO COMMUNICATE</p>
         <h1 id="home-heading">Words in.<br /><span>Braille out.</span></h1>
-        <p className="hero-copy">Type, speak, or scan printed text. BrailleBridge turns reviewed words into Grade 1 or Grade 2 Braille with a clear three-cell preview.</p>
+        <p className="hero-copy">Type, speak, scan printed text, or open a document. BrailleBridge turns reviewed words into Grade 1 or Grade 2 Braille with a clear three-cell preview.</p>
         <a className="primary-button hero-action" href="#text">Start with text</a>
       </div>
       <div className="hero-braille" aria-hidden="true"><span>⠃</span><span>⠗</span><span>⠇</span></div>
@@ -83,12 +84,9 @@ export default function App() {
         </Suspense>
         {cameraOutput && <UnifiedBraillePreview translation={cameraOutput.result} text={cameraOutput.text} grade={grade} source="camera" />}
       </>}
-      {active === 'document' && <DocumentFeature />}
+      {active === 'document' && <DocumentFeature grade={grade} />}
     </main>
-    <aside className="hardware-status" aria-labelledby="hardware-heading">
-      <div><p className="eyebrow">HARDWARE STATUS</p><h2 id="hardware-heading">Simulation mode</h2></div>
-      <p><span className="status-indicator simulated" aria-hidden="true" /> Three-cell output is simulated. No physical Braille display or Arduino is connected.</p>
-    </aside>
+    <HardwareStatusSection />
     <footer><span>BrailleBridge</span><span>Accessible communication, one cell at a time.</span></footer>
   </div>;
 }

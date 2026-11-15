@@ -2,7 +2,7 @@ import { validateTranslation } from '../../speech/src/braille/client.js';
 
 export function makeTranslationRequest(text, { source = 'text', grade = 1, mode = 'verbatim' } = {}) {
   if (typeof text !== 'string' || !text.trim()) throw new Error('Enter or capture some text first.');
-  if (!['text', 'speech', 'camera', 'website'].includes(source)) throw new Error('Unsupported input source.');
+  if (!['text', 'speech', 'camera', 'website', 'document'].includes(source)) throw new Error('Unsupported input source.');
   if (![1, 2].includes(grade)) throw new Error('Unsupported Braille grade.');
   return { source, text, mode, grade };
 }

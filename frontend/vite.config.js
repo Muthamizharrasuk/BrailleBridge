@@ -16,6 +16,8 @@ export default defineConfig({
     proxy: {
       '/api/braille': { target: process.env.BRAILLE_BACKEND_URL || 'http://127.0.0.1:8000' },
       '/api/health': { target: process.env.BRAILLE_BACKEND_URL || 'http://127.0.0.1:8000' },
+      '/api/hardware': { target: process.env.BRAILLE_BACKEND_URL || 'http://127.0.0.1:8000' },
+      '/api/ai': { target: process.env.BRAILLE_BACKEND_URL || 'http://127.0.0.1:8000' },
       '/api/speech': { target: process.env.SPEECH_BACKEND_URL || 'http://127.0.0.1:8001' },
     },
   },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assessFrame, assessQuality, detectPageBounds, grayFromRgba, measureGray } from './imageQuality.js';
+import { assessFrame, assessQuality, detectPageBounds, frameMotionScore, grayFromRgba, makeFrameSignature, measureGray } from './imageQuality.js';
 
 const flat = (v, w = 20, h = 20) => ({ gray: new Float32Array(w * h).fill(v), w, h });
 const stripes = (w = 20, h = 20) => {
@@ -34,6 +34,21 @@ describe('image quality', () => {
   });
   it('accepts a good image', () => {
     expect(assessQuality({ brightness: 220, contrast: 46, sharpness: 13000 })).toMatchObject({ ok: true });
+  });
+});
+
+describe('frame motion', () => {
+  it('creates a compact signature and measures luminance changes', () => {
+    const still = makeFrameSignature(new Float32Array(64).fill(100), 8, 8);
+    const moved = makeFrameSignature(new Float32Array(64).fill(140), 8, 8);
+    expect(still).toHaveLength(64);
+    expect(frameMotionScore(still, still)).toBe(0);
+    expect(frameMotionScore(still, moved)).toBe(40);
+  });
+
+  it('treats missing or incompatible signatures as unknown motion', () => {
+    expect(frameMotionScore(null, [1])).toBe(Infinity);
+    expect(frameMotionScore([1], [1, 2])).toBe(Infinity);
   });
 });
 

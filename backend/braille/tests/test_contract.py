@@ -30,7 +30,7 @@ def test_modes_are_identical():
 
 
 def test_all_sources_accepted():
-    for src in ("text", "speech", "website", "camera"):
+    for src in ("text", "speech", "website", "camera", "document"):
         assert post("abc", source=src)["cells"] == [1, 3, 9]
 
 

@@ -1,13 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import BrailleCell from './BrailleCell.jsx';
 import { formatSerialCommand } from './brailleSerial.js';
+import { threeCellsToMotorColumns } from '../hardware/brailleColumns.js';
+import { sendHardwarePage } from '../hardware/client.js';
+import useHardwareStatus from '../hardware/useHardwareStatus.js';
 
 export default function UnifiedBraillePreview({ translation, text, grade, source }) {
   const [pageIndex, setPageIndex] = useState(0);
+  const [sending, setSending] = useState(false);
+  const [sendStatus, setSendStatus] = useState('');
+  const { status: hardware, check: checkHardware, setStatus: setHardware } = useHardwareStatus();
   useEffect(() => setPageIndex(0), [translation]);
+  useEffect(() => setSendStatus(''), [translation, pageIndex]);
   const pages = translation?.pages ?? [];
   const page = pages[pageIndex] ?? [0, 0, 0];
   const serial = pages.length ? formatSerialCommand(page) : '';
+  const motorColumns = pages.length ? threeCellsToMotorColumns(page) : [];
+
+  async function sendPage() {
+    setSending(true); setSendStatus('Sending selected Braille page…');
+    try {
+      const result = await sendHardwarePage(page);
+      setHardware((current) => ({ ...current, state: 'connected', connected: true, message: 'Arduino connected.' }));
+      setSendStatus(result.duplicate
+        ? 'This Braille page is already displayed; no duplicate command was sent.'
+        : `Page sent. Arduino replied: ${result.response}`);
+    } catch (error) {
+      setHardware((current) => ({ ...current, state: 'disconnected', connected: false, message: error.message }));
+      setSendStatus(`Could not send page: ${error.message}`);
+    } finally { setSending(false); }
+  }
 
   return <section className="output-panel" aria-labelledby="braille-output-heading">
     <div className="section-heading-row">
@@ -30,9 +52,19 @@ export default function UnifiedBraillePreview({ translation, text, grade, source
       </div>
     </>}
     <div className="hardware-preview">
-      <div><span className="status-indicator simulated" aria-hidden="true" /> <strong>Simulator active</strong></div>
-      <p>Physical Braille hardware is not connected. This command is a preview for future Arduino serial integration.</p>
+      <div><span className={`status-indicator ${hardware.state}`} aria-hidden="true" /> <strong>{hardware.state === 'connected' ? 'Arduino connected' : hardware.state === 'simulation' ? 'Simulator active' : hardware.state === 'checking' ? 'Checking hardware' : 'Arduino disconnected'}</strong></div>
+      <p>{hardware.message}</p>
       <code>{serial ? JSON.stringify(serial) : 'No command yet'}</code>
+      <div className="hardware-actions">
+        <button type="button" className="primary-button" onClick={sendPage} disabled={!hardware.connected || sending || !pages.length}>{sending ? 'Sending…' : 'Send selected page to Arduino'}</button>
+        <button type="button" className="secondary-button" onClick={checkHardware} disabled={sending}>Check connection</button>
+      </div>
+      <p className="hardware-send-status" role="status" aria-live="polite">{sendStatus}</p>
+      {motorColumns.length > 0 && <details className="motor-preview">
+        <summary>Six-motor column preview</summary>
+        <ol>{motorColumns.map((pattern, index) => <li key={index}>Motor {index + 1}: <code>{pattern.toString(2).padStart(3, '0')}</code></li>)}</ol>
+        <p>Servo positions and pins are not calibrated yet.</p>
+      </details>}
     </div>
   </section>;
 }

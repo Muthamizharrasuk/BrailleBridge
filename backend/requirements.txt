@@ -2,4 +2,5 @@ fastapi
 uvicorn
 pytest
 httpx
+pyserial
 # Liblouis bindings: brew install liblouis (loaded automatically by translator.py)

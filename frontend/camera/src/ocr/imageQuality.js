@@ -125,5 +125,29 @@ export function analyzeCanvasLike(source, sw, sh, maxSide = 320) {
   context.drawImage(source, 0, 0, width, height);
   const pixels = context.getImageData(0, 0, width, height);
   const gray = grayFromRgba(pixels.data, width, height);
-  return assessFrame(measureGray(gray, width, height), detectPageBounds(gray, width, height));
+  return {
+    ...assessFrame(measureGray(gray, width, height), detectPageBounds(gray, width, height)),
+    frameSignature: makeFrameSignature(gray, width, height),
+  };
+}
+
+// A small luminance fingerprint is enough to reject meaningful camera/page
+// movement without retaining or transmitting a camera frame.
+export function makeFrameSignature(gray, width, height, gridSize = 8) {
+  const signature = [];
+  for (let gy = 0; gy < gridSize; gy += 1) {
+    for (let gx = 0; gx < gridSize; gx += 1) {
+      const x0 = Math.floor(gx * width / gridSize); const x1 = Math.max(x0 + 1, Math.floor((gx + 1) * width / gridSize));
+      const y0 = Math.floor(gy * height / gridSize); const y1 = Math.max(y0 + 1, Math.floor((gy + 1) * height / gridSize));
+      let sum = 0; let count = 0;
+      for (let y = y0; y < y1; y += 1) for (let x = x0; x < x1; x += 1) { sum += gray[y * width + x]; count += 1; }
+      signature.push(sum / count);
+    }
+  }
+  return signature;
+}
+
+export function frameMotionScore(previous, current) {
+  if (!previous || !current || previous.length !== current.length || !current.length) return Infinity;
+  return current.reduce((sum, value, index) => sum + Math.abs(value - previous[index]), 0) / current.length;
 }
